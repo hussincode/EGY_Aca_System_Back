@@ -1,5 +1,23 @@
 import { getPool, sql } from '../config/db.js';
 
+function isValidGuid(value) {
+  if (!value) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value).trim());
+}
+
+async function resolveForeignKey(pool, value, tableName) {
+  if (!value) return null;
+  const normalized = String(value).trim();
+  if (!isValidGuid(normalized)) return null;
+
+  const result = await pool
+    .request()
+    .input('id', sql.UniqueIdentifier, normalized)
+    .query(`SELECT TOP 1 1 AS found FROM ${tableName} WHERE id = @id`);
+
+  return result.recordset?.length ? normalized : null;
+}
+
 export async function getPlayers(req, res) {
   const pool = await getPool();
   const result = await pool
@@ -39,14 +57,17 @@ export async function createPlayer(req, res) {
   }
 
   const pool = await getPool();
+  const resolvedGameId = await resolveForeignKey(pool, game_id, 'games');
+  const resolvedBranchId = await resolveForeignKey(pool, branch_id, 'branches');
+
   const result = await pool
     .request()
     .input('playerSerial', sql.NVarChar, playerSerial || null)
     .input('name', sql.NVarChar, name)
     .input('age', sql.Int, age || null)
     .input('phone', sql.NVarChar, phone || null)
-    .input('game_id', sql.UniqueIdentifier, game_id || null)
-    .input('branch_id', sql.UniqueIdentifier, branch_id || null)
+    .input('game_id', sql.UniqueIdentifier, resolvedGameId || null)
+    .input('branch_id', sql.UniqueIdentifier, resolvedBranchId || null)
     .input('status', sql.NVarChar, status || 'paid')
     .input('photo', sql.NVarChar, photo || null)
     .input('schedule', sql.NVarChar, schedule || null)

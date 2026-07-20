@@ -14,6 +14,23 @@ export async function getUsers(req, res) {
   return res.json({ data: result.recordset || [] });
 }
 
+export async function deleteUser(req, res) {
+  const { id } = req.params;
+  if (!id) return res.status(400).json({ message: 'User ID is required' });
+
+  const pool = await getPool();
+  const result = await pool
+    .request()
+    .input('id', sql.UniqueIdentifier, id)
+    .query('DELETE FROM users WHERE id = @id');
+
+  if (!result.rowsAffected?.[0]) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  return res.status(204).send();
+}
+
 export async function updateUser(req, res) {
   const { id } = req.params;
   const { password, name, email, role, branch_id } = req.body;

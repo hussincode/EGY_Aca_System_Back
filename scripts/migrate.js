@@ -10,6 +10,16 @@ const sql = process.env.DB_DRIVER === 'msnodesqlv8'
   ? require('mssql/msnodesqlv8.js')
   : require('mssql');
 
+function withTimeout(promise, ms, message) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
 function normalizeConnectionString(rawValue) {
   if (!rawValue) return null;
   return rawValue.trim();
@@ -39,6 +49,8 @@ function buildDatabaseConfig(database) {
   const config = {
     server: rawServer,
     database,
+    connectionTimeout: 5000,
+    requestTimeout: 5000,
     options: {
       trustServerCertificate: true,
       enableArithAbort: true,
@@ -113,7 +125,7 @@ async function runMigration() {
   console.log(`Using database: ${databaseName}`);
   console.log('Connecting to SQL Server...');
 
-  const adminPool = await sql.connect(adminConfig);
+  const adminPool = await withTimeout(sql.connect(adminConfig), 8000, 'Database connection timed out after 8 seconds');
   try {
     console.log('Checking database existence...');
     await ensureDatabaseExists(adminPool, databaseName);
@@ -122,7 +134,7 @@ async function runMigration() {
   }
 
   console.log('Database exists. Running schema migration...');
-  const pool = await sql.connect(dbConfig);
+  const pool = await withTimeout(sql.connect(dbConfig), 8000, 'Database connection timed out after 8 seconds');
   try {
     const batches = querySql
       .split(/\nGO\s*\n/gi)

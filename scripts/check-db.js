@@ -8,24 +8,95 @@ const sql = process.env.DB_DRIVER === 'msnodesqlv8'
   ? require('mssql/msnodesqlv8.js')
   : require('mssql');
 
+function withTimeout(promise, ms, message) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
 function normalizeConnectionString(rawValue) {
   if (!rawValue) return null;
   return rawValue.trim();
 }
 
-function replaceConnectionStringDatabase(connectionString, database) {
-  const hasDatabase = /(Database|Initial Catalog)\s*=\s*[^;]+/i.test(connectionString);
-  if (hasDatabase) {
-    return connectionString.replace(/(Database|Initial Catalog)\s*=\s*[^;]+/gi, `Database=${database}`);
+function parseConnectionString(connectionString) {
+  if (!connectionString) return null;
+
+  const values = {};
+  connectionString.split(';').forEach((entry) => {
+    const value = entry.trim();
+    if (!value) return;
+
+    const separatorIndex = value.indexOf('=');
+    if (separatorIndex === -1) return;
+
+    const key = value.slice(0, separatorIndex).trim().toLowerCase();
+    const parsedValue = value.slice(separatorIndex + 1).trim();
+    values[key] = parsedValue;
+  });
+
+  const serverValue = values.server || values['data source'] || values.address || values.addr || values['network address'];
+  const database = values.database || values['initial catalog'] || values.catalog;
+  const user = values['user id'] || values.userid || values.user;
+  const password = values.password || values.pwd;
+  const encrypt = values.encrypt;
+  const trustServerCertificate = values.trustservercertificate;
+  const multipleActiveResultSets = values.multipleresultsets;
+
+  if (!serverValue) {
+    return null;
   }
-  return `${connectionString}${connectionString.endsWith(';') ? '' : ';'}Database=${database}`;
+
+  const serverParts = serverValue.split(',');
+  const rawServer = serverParts[0].trim();
+  const server = rawServer.replace(/^tcp:/i, '').replace(/^udp:/i, '').trim();
+  const parsedPort = serverParts[1] ? Number(serverParts[1].trim()) : undefined;
+
+  const options = {
+    trustServerCertificate: trustServerCertificate ? trustServerCertificate.toLowerCase() === 'true' || trustServerCertificate.toLowerCase() === 'yes' : true,
+    enableArithAbort: true,
+    encrypt: encrypt ? encrypt.toLowerCase() === 'true' || encrypt.toLowerCase() === 'yes' || encrypt.toLowerCase() === 'mandatory' : false,
+  };
+
+  if (multipleActiveResultSets && (multipleActiveResultSets.toLowerCase() === 'true' || multipleActiveResultSets.toLowerCase() === 'yes')) {
+    options.multipleActiveResultSets = true;
+  }
+
+  return {
+    server,
+    ...(parsedPort ? { port: parsedPort } : {}),
+    database: database || process.env.DB_NAME || 'EgySystem',
+    options,
+    ...(user ? { user } : {}),
+    ...(password ? { password } : {}),
+  };
 }
 
 function buildDatabaseConfig(database) {
   const connectionString = normalizeConnectionString(process.env.DB_CONNECTION_STRING);
   if (connectionString) {
+    const parsedConnection = parseConnectionString(connectionString);
+    if (parsedConnection) {
+      const config = {
+        ...parsedConnection,
+        database: parsedConnection.database || database,
+        connectionTimeout: 5000,
+        requestTimeout: 5000,
+      };
+      if (process.env.DB_DRIVER) {
+        config.driver = process.env.DB_DRIVER;
+      }
+      return config;
+    }
+
     const config = {
-      connectionString: replaceConnectionStringDatabase(connectionString, database),
+      connectionString,
+      connectionTimeout: 5000,
+      requestTimeout: 5000,
     };
     if (process.env.DB_DRIVER) {
       config.driver = process.env.DB_DRIVER;
@@ -37,6 +108,8 @@ function buildDatabaseConfig(database) {
   const config = {
     server: rawServer,
     database,
+    connectionTimeout: 5000,
+    requestTimeout: 5000,
     options: {
       trustServerCertificate: true,
       enableArithAbort: true,
@@ -96,7 +169,7 @@ async function checkDatabase() {
     connectionString: dbConfig.connectionString ? '(connection string provided)' : undefined,
   });
 
-  const pool = await sql.connect(dbConfig);
+  const pool = await withTimeout(sql.connect(dbConfig), 8000, 'Database connection timed out after 8 seconds');
   try {
     const result = await pool
       .request()

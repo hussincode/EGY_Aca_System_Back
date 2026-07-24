@@ -6,11 +6,11 @@ import { getFinanceRecords, createFinanceRecord, updateFinanceRecord, deleteFina
 
 const router = express.Router();
 
-router.get('/', protect, authorizeRoles('admin', 'manager', 'coach', 'accountant'), getFinanceRecords);
+router.get('/', protect, authorizeRoles('admin', 'manager', 'accountant'), getFinanceRecords);
 router.post(
   '/',
   protect,
-  authorizeRoles('admin', 'manager', 'coach', 'accountant'),
+  authorizeRoles('admin', 'manager', 'accountant'),
   [
     body('type').isString().notEmpty(),
     body('category').isString().notEmpty(),
@@ -29,7 +29,7 @@ router.post(
 router.put(
   '/:id',
   protect,
-  authorizeRoles('admin', 'manager', 'coach', 'accountant'),
+  authorizeRoles('admin', 'manager', 'accountant'),
   [
     body('type').isString().notEmpty(),
     body('category').isString().notEmpty(),
@@ -44,6 +44,6 @@ router.put(
   validate,
   updateFinanceRecord,
 );
-router.delete('/:id', protect, authorizeRoles('admin', 'manager', 'coach', 'accountant'), deleteFinanceRecord);
+router.delete('/:id', protect, authorizeRoles('admin', 'manager', 'accountant'), deleteFinanceRecord);
 
 export default router;

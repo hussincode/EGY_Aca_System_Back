@@ -10,7 +10,7 @@ router.get('/', protect, getSubscriptions);
 router.post(
   '/',
   protect,
-  authorizeRoles('admin', 'manager', 'coach', 'accountant'),
+  authorizeRoles('admin', 'manager', 'accountant'),
   [
     body('player_id').isUUID(),
     body('subscription_value').isNumeric(),
@@ -24,7 +24,7 @@ router.post(
   validate,
   createSubscription,
 );
-router.put('/:id', protect, authorizeRoles('admin', 'manager', 'coach', 'accountant'), updateSubscription);
-router.delete('/:id', protect, authorizeRoles('admin', 'manager', 'coach', 'accountant'), deleteSubscription);
+router.put('/:id', protect, authorizeRoles('admin', 'manager', 'accountant'), updateSubscription);
+router.delete('/:id', protect, authorizeRoles('admin', 'manager', 'accountant'), deleteSubscription);
 
 export default router;

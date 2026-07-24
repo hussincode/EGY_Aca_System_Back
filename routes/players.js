@@ -10,7 +10,7 @@ router.get('/', protect, getPlayers);
 router.post(
   '/',
   protect,
-  authorizeRoles('admin', 'manager', 'coach', 'accountant'),
+  authorizeRoles('admin', 'manager'),
   [
     body('name').isString().notEmpty(),
     body('playerSerial').optional({ nullable: true }).isString(),
@@ -32,7 +32,7 @@ router.post(
   validate,
   createPlayer,
 );
-router.put('/:id', protect, authorizeRoles('admin', 'manager', 'coach', 'accountant'), updatePlayer);
-router.delete('/:id', protect, authorizeRoles('admin', 'manager', 'coach', 'accountant'), deletePlayer);
+router.put('/:id', protect, authorizeRoles('admin', 'manager'), updatePlayer);
+router.delete('/:id', protect, authorizeRoles('admin', 'manager'), deletePlayer);
 
 export default router;

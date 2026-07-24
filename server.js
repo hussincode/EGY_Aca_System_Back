@@ -14,7 +14,7 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN ? [process.env.CORS_ORIGIN] : ['http://localhost:5173'],
+    origin: true,
     credentials: true,
   }),
 );
@@ -23,10 +23,13 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(morgan('dev'));
 
+// Landing settings route is mounted BEFORE the rate limiter so polling never gets throttled
+app.use('/api/landing-settings', (await import('./routes/landingSettings.js')).default);
+
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 100,
+    limit: 1000,
     standardHeaders: true,
     legacyHeaders: false,
   }),

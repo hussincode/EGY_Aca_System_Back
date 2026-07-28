@@ -1,5 +1,29 @@
 import { getPool, sql } from '../config/db.js';
 
+function normalizeSubscriptionPayload(body = {}) {
+  const toNullableString = (value) => {
+    if (value === undefined || value === null || value === '') return null;
+    return String(value);
+  };
+
+  return {
+    player_id: body.player_id ?? body.playerId ?? null,
+    game_id: body.game_id ?? body.gameId ?? null,
+    branch_id: body.branch_id ?? body.branchId ?? null,
+    schedule: toNullableString(body.schedule),
+    training_time: toNullableString(body.training_time ?? body.trainingTime),
+    sessions: Number.isFinite(Number(body.sessions)) ? Number(body.sessions) : 0,
+    subscription_value: Number(body.subscription_value ?? body.subscriptionValue ?? 0),
+    paid_amount: Number(body.paid_amount ?? body.paidAmount ?? 0),
+    start_date: body.start_date ?? body.startDate ?? null,
+    end_date: body.end_date ?? body.endDate ?? null,
+    status: toNullableString(body.status) || 'active',
+    invoice_number: toNullableString(body.invoice_number ?? body.invoiceNumber),
+  };
+}
+
+export { normalizeSubscriptionPayload };
+
 export async function getSubscriptions(req, res) {
   const pool = await getPool();
   const result = await pool
@@ -16,6 +40,7 @@ export async function getSubscriptions(req, res) {
 }
 
 export async function createSubscription(req, res) {
+  const payload = normalizeSubscriptionPayload(req.body);
   const {
     player_id,
     game_id,
@@ -29,9 +54,9 @@ export async function createSubscription(req, res) {
     end_date,
     status,
     invoice_number,
-  } = req.body;
+  } = payload;
 
-  if (!player_id || !subscription_value || !start_date || !end_date) {
+  if (!player_id || subscription_value === null || subscription_value === undefined || !start_date || !end_date) {
     return res.status(400).json({ message: 'Missing required subscription fields' });
   }
 
@@ -69,7 +94,7 @@ export async function createSubscription(req, res) {
 
 export async function updateSubscription(req, res) {
   const { id } = req.params;
-  const updates = req.body;
+  const updates = normalizeSubscriptionPayload(req.body);
   if (!id) return res.status(400).json({ message: 'Subscription ID is required' });
 
   const pool = await getPool();

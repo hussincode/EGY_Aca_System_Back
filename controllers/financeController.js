@@ -1,5 +1,27 @@
 import { getPool, sql } from '../config/db.js';
 
+function normalizeFinancePayload(body = {}) {
+  const toNullableString = (value) => {
+    if (value === undefined || value === null || value === '') return null;
+    return String(value);
+  };
+
+  return {
+    type: toNullableString(body.type ?? body.Type),
+    category: toNullableString(body.category ?? body.Category),
+    branch_id: body.branch_id ?? body.branchId ?? null,
+    related_to: body.related_to ?? body.relatedTo ?? null,
+    amount: Number(body.amount ?? body.Amount ?? 0),
+    date: body.date ?? body.Date ?? null,
+    description: toNullableString(body.description ?? body.Description),
+    source: toNullableString(body.source ?? body.Source),
+    source_id: body.source_id ?? body.sourceId ?? null,
+    created_by_id: body.created_by_id ?? body.createdById ?? null,
+  };
+}
+
+export { normalizeFinancePayload };
+
 export async function getFinanceRecords(req, res) {
   const pool = await getPool();
   const result = await pool
@@ -9,7 +31,8 @@ export async function getFinanceRecords(req, res) {
 }
 
 export async function createFinanceRecord(req, res) {
-  const { type, category, branch_id, related_to, amount, date, description, source, source_id, created_by_id } = req.body;
+  const payload = normalizeFinancePayload(req.body);
+  const { type, category, branch_id, related_to, amount, date, description, source, source_id, created_by_id } = payload;
   if (!type || !category || !amount || !date) {
     return res.status(400).json({ message: 'Missing required finance fields' });
   }
@@ -44,7 +67,8 @@ export async function updateFinanceRecord(req, res) {
   const { id } = req.params;
   if (!id) return res.status(400).json({ message: 'Finance ID is required' });
 
-  const { type, category, branch_id, related_to, amount, date, description, source, source_id } = req.body;
+  const payload = normalizeFinancePayload(req.body);
+  const { type, category, branch_id, related_to, amount, date, description, source, source_id } = payload;
   if (!type || !category || !amount || !date) {
     return res.status(400).json({ message: 'Missing required finance fields' });
   }

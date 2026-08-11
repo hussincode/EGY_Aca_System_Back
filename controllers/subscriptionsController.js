@@ -6,19 +6,61 @@ function normalizeSubscriptionPayload(body = {}) {
     return String(value);
   };
 
+  // Only pass valid GUIDs to sql.UniqueIdentifier; empty strings / names cause a 500
+  const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const toNullableGuid = (value) => {
+    if (!value || !GUID_RE.test(String(value).trim())) return null;
+    return String(value).trim();
+  };
+
   return {
-    player_id: body.player_id ?? body.playerId ?? null,
-    game_id: body.game_id ?? body.gameId ?? null,
-    branch_id: body.branch_id ?? body.branchId ?? null,
+    player_id: toNullableGuid(body.player_id ?? body.playerId),
+    game_id:   toNullableGuid(body.game_id   ?? body.gameId),
+    branch_id: toNullableGuid(body.branch_id ?? body.branchId),
     schedule: toNullableString(body.schedule),
     training_time: toNullableString(body.training_time ?? body.trainingTime),
     sessions: Number.isFinite(Number(body.sessions)) ? Number(body.sessions) : 0,
-    subscription_value: Number(body.subscription_value ?? body.subscriptionValue ?? 0),
-    paid_amount: Number(body.paid_amount ?? body.paidAmount ?? 0),
+    subscription_value: body.subscription_value ?? body.subscriptionValue ?? null,
+    paid_amount: Number.isFinite(Number(body.paid_amount ?? body.paidAmount)) ? Number(body.paid_amount ?? body.paidAmount) : 0,
     start_date: body.start_date ?? body.startDate ?? null,
     end_date: body.end_date ?? body.endDate ?? null,
     status: toNullableString(body.status) || 'active',
     invoice_number: toNullableString(body.invoice_number ?? body.invoiceNumber),
+  };
+}
+
+function formatSubscriptionRecord(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    id: row.id,
+    playerId: row.player_id || row.playerId || '',
+    player_id: row.player_id || row.playerId || null,
+    player: row.player_name || row.player || '',
+    player_name: row.player_name || row.player || '',
+    game: row.game_name || row.game || '',
+    game_name: row.game_name || row.game || '',
+    gameId: row.game_id || row.gameId || null,
+    game_id: row.game_id || row.gameId || null,
+    branch: row.branch_name || row.branch || '',
+    branch_name: row.branch_name || row.branch || '',
+    branchId: row.branch_id || row.branchId || null,
+    branch_id: row.branch_id || row.branchId || null,
+    schedule: row.schedule || '',
+    trainingTime: row.training_time || row.trainingTime || '',
+    training_time: row.training_time || row.trainingTime || '',
+    sessions: Number(row.sessions || 0),
+    subscriptionValue: Number(row.subscription_value ?? row.subscriptionValue ?? 0),
+    subscription_value: Number(row.subscription_value ?? row.subscriptionValue ?? 0),
+    paidAmount: Number(row.paid_amount ?? row.paidAmount ?? 0),
+    paid_amount: Number(row.paid_amount ?? row.paidAmount ?? 0),
+    startDate: row.start_date || row.startDate || '',
+    start_date: row.start_date || row.startDate || null,
+    endDate: row.end_date || row.endDate || '',
+    end_date: row.end_date || row.endDate || null,
+    status: row.status || 'active',
+    invoiceNumber: row.invoice_number || row.invoiceNumber || '',
+    invoice_number: row.invoice_number || row.invoiceNumber || '',
   };
 }
 
@@ -36,7 +78,8 @@ export async function getSubscriptions(req, res) {
       LEFT JOIN branches b ON s.branch_id = b.id
       ORDER BY s.start_date DESC
     `);
-  return res.json({ data: result.recordset || [] });
+  const formatted = (result.recordset || []).map(formatSubscriptionRecord);
+  return res.json({ data: formatted });
 }
 
 export async function createSubscription(req, res) {
@@ -56,7 +99,9 @@ export async function createSubscription(req, res) {
     invoice_number,
   } = payload;
 
-  if (!player_id || subscription_value === null || subscription_value === undefined || !start_date || !end_date) {
+  const subVal = subscription_value !== null ? Number(subscription_value) : 0;
+
+  if (!player_id || !start_date || !end_date) {
     return res.status(400).json({ message: 'Missing required subscription fields' });
   }
 
@@ -69,7 +114,7 @@ export async function createSubscription(req, res) {
     .input('schedule', sql.NVarChar, schedule || null)
     .input('training_time', sql.NVarChar, training_time || null)
     .input('sessions', sql.Int, sessions || 0)
-    .input('subscription_value', sql.Decimal(10, 2), subscription_value)
+    .input('subscription_value', sql.Decimal(10, 2), subVal)
     .input('paid_amount', sql.Decimal(10, 2), paid_amount || 0)
     .input('start_date', sql.Date, start_date)
     .input('end_date', sql.Date, end_date)
@@ -89,7 +134,8 @@ export async function createSubscription(req, res) {
       )
     `);
 
-  return res.status(201).json({ data: result.recordset?.[0] || null, message: 'Subscription created' });
+  const created = result.recordset?.[0] ? formatSubscriptionRecord(result.recordset[0]) : null;
+  return res.status(201).json({ data: created, message: 'Subscription created' });
 }
 
 export async function updateSubscription(req, res) {
@@ -113,13 +159,19 @@ export async function updateSubscription(req, res) {
     invoice_number: { col: 'invoice_number', type: sql.NVarChar },
   };
 
+  const nonNullableFields = new Set(['player_id', 'subscription_value', 'start_date', 'end_date']);
   const updateFields = [];
   const request = pool.request().input('id', sql.UniqueIdentifier, id);
 
   Object.entries(fieldMap).forEach(([key, field]) => {
     if (key in updates) {
+      const val = updates[key];
+      // Do not update NOT NULL columns if value is null
+      if (val === null && nonNullableFields.has(key)) {
+        return;
+      }
       updateFields.push(`${field.col} = @${key}`);
-      request.input(key, field.type, updates[key] ?? null);
+      request.input(key, field.type, val ?? null);
     }
   });
 
@@ -133,16 +185,24 @@ export async function updateSubscription(req, res) {
     WHERE id = @id;
   `);
 
-  const updated = await pool
+  const updatedResult = await pool
     .request()
     .input('id', sql.UniqueIdentifier, id)
-    .query('SELECT * FROM subscriptions WHERE id = @id');
+    .query(`
+      SELECT s.*, p.name AS player_name, g.name AS game_name, b.name AS branch_name
+      FROM subscriptions s
+      LEFT JOIN players p ON s.player_id = p.id
+      LEFT JOIN games g ON s.game_id = g.id
+      LEFT JOIN branches b ON s.branch_id = b.id
+      WHERE s.id = @id
+    `);
 
-  if (!updated.recordset?.length) {
+  if (!updatedResult.recordset?.length) {
     return res.status(404).json({ message: 'Subscription not found' });
   }
 
-  return res.json({ data: updated.recordset[0], message: 'Subscription updated' });
+  const updated = formatSubscriptionRecord(updatedResult.recordset[0]);
+  return res.json({ data: updated, message: 'Subscription updated' });
 }
 
 export async function deleteSubscription(req, res) {
@@ -157,3 +217,4 @@ export async function deleteSubscription(req, res) {
 
   return res.status(204).send();
 }
+

@@ -13,7 +13,7 @@ VALUES
 IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'Admin@gmail.com')
 BEGIN
   INSERT INTO users (id, name, email, password, role, branch_id)
-  VALUES (NEWID(), N'Admin', N'Admin@gmail.com', N'$2b$12$X.dUR87r0ua2qMBafCgimO3zwMvrpYJqVc/d4vgo1crE1i8TwPsna', N'admin', NULL);
+  VALUES (NEWID(), N'Admin', N'Admin@gmail.com', N'$2b$12$JlzNRmROaJM5.2avQN6R7Ok8eAFrCw4VcbiovUYL7BaD9jx5P25P2', N'admin', NULL);
 END
 
 -- Games

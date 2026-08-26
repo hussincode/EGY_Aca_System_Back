@@ -168,6 +168,25 @@ export async function getPool() {
   if (!pool) {
     pool = await withTimeout(sql.connect(config), 8000, 'Database connection timed out after 8 seconds');
     console.log('✅ Connected to SQL Server');
+    try {
+      await pool.request().query(`
+        IF OBJECT_ID('attendance','U') IS NOT NULL
+        BEGIN
+          DECLARE @ConstraintName NVARCHAR(200);
+          SELECT TOP 1 @ConstraintName = cc.name
+          FROM sys.check_constraints cc
+          JOIN sys.columns c ON cc.parent_object_id = c.object_id AND cc.parent_column_id = c.column_id
+          WHERE cc.parent_object_id = OBJECT_ID('attendance') AND c.name = 'status';
+          IF @ConstraintName IS NOT NULL AND @ConstraintName <> 'CK_attendance_status'
+          BEGIN
+              EXEC('ALTER TABLE attendance DROP CONSTRAINT ' + @ConstraintName);
+              ALTER TABLE attendance ADD CONSTRAINT CK_attendance_status CHECK (status IN ('present', 'absent', 'late'));
+          END
+        END
+      `);
+    } catch {
+      // ignore constraint auto-patch errors
+    }
   }
   return pool;
 }

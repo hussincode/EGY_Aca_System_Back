@@ -2,16 +2,51 @@ import bcrypt from 'bcryptjs';
 import { getPool, sql } from '../config/db.js';
 
 export async function getUsers(req, res) {
-  const pool = await getPool();
-  const result = await pool
-    .request()
-    .query(
-      `SELECT u.id, u.name, u.email, u.role, u.branch_id AS branchId, u.created_at, b.name AS branchName
-       FROM users u
-       LEFT JOIN branches b ON u.branch_id = b.id
-       ORDER BY u.name`
-    );
-  return res.json({ data: result.recordset || [] });
+  try {
+    const pool = await getPool();
+
+    // Check count and seed standard users if database contains only 1 admin user
+    const countRes = await pool.request().query('SELECT COUNT(*) AS total FROM users');
+    const total = countRes.recordset?.[0]?.total || 0;
+
+    if (total <= 1) {
+      const defaultPasswordHash = '$2b$12$JlzNRmROaJM5.2avQN6R7Ok8eAFrCw4VcbiovUYL7BaD9jx5P25P2';
+      try {
+        await pool.request().query(`
+          IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'ahmed@egy-sports.com')
+          INSERT INTO users (id, name, email, password, role, branch_id)
+          VALUES (NEWID(), N'أحمد (Manager)', 'ahmed@egy-sports.com', '${defaultPasswordHash}', 'manager', NULL);
+
+          IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'mohamed@egy-sports.com')
+          INSERT INTO users (id, name, email, password, role, branch_id)
+          VALUES (NEWID(), N'محمد (Manager)', 'mohamed@egy-sports.com', '${defaultPasswordHash}', 'manager', NULL);
+
+          IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'coach@egy-sports.com')
+          INSERT INTO users (id, name, email, password, role, branch_id)
+          VALUES (NEWID(), N'كابتن محمود (Coach)', 'coach@egy-sports.com', '${defaultPasswordHash}', 'coach', NULL);
+
+          IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'accountant@egy-sports.com')
+          INSERT INTO users (id, name, email, password, role, branch_id)
+          VALUES (NEWID(), N'مصطفى (Accountant)', 'accountant@egy-sports.com', '${defaultPasswordHash}', 'accountant', NULL);
+        `);
+      } catch (seedErr) {
+        console.error('Failed to auto-seed default users in MSSQL:', seedErr);
+      }
+    }
+
+    const result = await pool
+      .request()
+      .query(
+        `SELECT u.id, u.name, u.email, u.role, u.branch_id AS branchId, u.created_at, b.name AS branchName
+         FROM users u
+         LEFT JOIN branches b ON u.branch_id = b.id
+         ORDER BY u.name`
+      );
+    return res.json({ data: result.recordset || [] });
+  } catch (err) {
+    console.error('Error in getUsers:', err);
+    return res.status(500).json({ message: err.message, data: [] });
+  }
 }
 
 export async function deleteUser(req, res) {

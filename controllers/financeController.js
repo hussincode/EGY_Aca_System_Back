@@ -1,4 +1,23 @@
-import { getPool, sql } from '../config/db.js';
+function isValidGuid(value) {
+  if (!value) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value).trim());
+}
+
+async function resolveBranchId(pool, val) {
+  if (!val) return null;
+  const str = String(val).trim();
+  if (isValidGuid(str)) return str;
+
+  try {
+    const res = await pool
+      .request()
+      .input('name', sql.NVarChar, str)
+      .query('SELECT TOP 1 id FROM branches WHERE name = @name');
+    if (res.recordset?.length) return res.recordset[0].id;
+  } catch {}
+
+  return null;
+}
 
 function normalizeFinancePayload(body = {}) {
   const toNullableString = (value) => {
@@ -9,8 +28,8 @@ function normalizeFinancePayload(body = {}) {
   return {
     type: toNullableString(body.type ?? body.Type),
     category: toNullableString(body.category ?? body.Category),
-    branch_id: body.branch_id ?? body.branchId ?? null,
-    related_to: body.related_to ?? body.relatedTo ?? null,
+    branch_id: body.branch_id ?? body.branchId ?? body.branch ?? null,
+    related_to: toNullableString(body.related_to ?? body.relatedTo),
     amount: Number(body.amount ?? body.Amount ?? 0),
     date: body.date ?? body.Date ?? null,
     description: toNullableString(body.description ?? body.Description),
@@ -23,11 +42,21 @@ function normalizeFinancePayload(body = {}) {
 export { normalizeFinancePayload };
 
 export async function getFinanceRecords(req, res) {
-  const pool = await getPool();
-  const result = await pool
-    .request()
-    .query('SELECT * FROM finance ORDER BY date DESC, created_at DESC');
-  return res.json({ data: result.recordset || [] });
+  try {
+    const pool = await getPool();
+    const result = await pool
+      .request()
+      .query(`
+        SELECT f.*, b.name AS branch_name, b.name AS branch
+        FROM finance f
+        LEFT JOIN branches b ON f.branch_id = b.id
+        ORDER BY f.date DESC, f.created_at DESC
+      `);
+    return res.json({ data: result.recordset || [] });
+  } catch (err) {
+    console.error('Error in getFinanceRecords:', err);
+    return res.status(500).json({ message: err.message, data: [] });
+  }
 }
 
 export async function createFinanceRecord(req, res) {
@@ -38,11 +67,13 @@ export async function createFinanceRecord(req, res) {
   }
 
   const pool = await getPool();
+  const resolvedBranchId = await resolveBranchId(pool, branch_id);
+
   const result = await pool
     .request()
     .input('type', sql.NVarChar, type)
     .input('category', sql.NVarChar, category)
-    .input('branch_id', sql.UniqueIdentifier, branch_id || null)
+    .input('branch_id', sql.UniqueIdentifier, resolvedBranchId)
     .input('related_to', sql.NVarChar, related_to || null)
     .input('amount', sql.Decimal(12, 2), amount)
     .input('date', sql.Date, date)
@@ -60,7 +91,16 @@ export async function createFinanceRecord(req, res) {
       )
     `);
 
-  return res.status(201).json({ data: result.recordset?.[0] || null, message: 'Finance record created' });
+  const createdRow = result.recordset?.[0] || null;
+  if (createdRow && resolvedBranchId) {
+    const bRes = await pool.request().input('bId', sql.UniqueIdentifier, resolvedBranchId).query('SELECT TOP 1 name FROM branches WHERE id = @bId');
+    if (bRes.recordset?.length) {
+      createdRow.branch_name = bRes.recordset[0].name;
+      createdRow.branch = bRes.recordset[0].name;
+    }
+  }
+
+  return res.status(201).json({ data: createdRow, message: 'Finance record created' });
 }
 
 export async function updateFinanceRecord(req, res) {
@@ -74,12 +114,14 @@ export async function updateFinanceRecord(req, res) {
   }
 
   const pool = await getPool();
+  const resolvedBranchId = await resolveBranchId(pool, branch_id);
+
   const result = await pool
     .request()
     .input('id', sql.UniqueIdentifier, id)
     .input('type', sql.NVarChar, type)
     .input('category', sql.NVarChar, category)
-    .input('branch_id', sql.UniqueIdentifier, branch_id || null)
+    .input('branch_id', sql.UniqueIdentifier, resolvedBranchId)
     .input('related_to', sql.NVarChar, related_to || null)
     .input('amount', sql.Decimal(12, 2), amount)
     .input('date', sql.Date, date)
@@ -105,7 +147,16 @@ export async function updateFinanceRecord(req, res) {
     return res.status(404).json({ message: 'Finance record not found' });
   }
 
-  return res.json({ data: result.recordset?.[0] || null, message: 'Finance record updated' });
+  const updatedRow = result.recordset?.[0] || null;
+  if (updatedRow && resolvedBranchId) {
+    const bRes = await pool.request().input('bId', sql.UniqueIdentifier, resolvedBranchId).query('SELECT TOP 1 name FROM branches WHERE id = @bId');
+    if (bRes.recordset?.length) {
+      updatedRow.branch_name = bRes.recordset[0].name;
+      updatedRow.branch = bRes.recordset[0].name;
+    }
+  }
+
+  return res.json({ data: updatedRow, message: 'Finance record updated' });
 }
 
 export async function deleteFinanceRecord(req, res) {

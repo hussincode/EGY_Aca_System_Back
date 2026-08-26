@@ -18,6 +18,29 @@ async function resolveForeignKey(pool, value, tableName) {
   return result.recordset?.length ? normalized : null;
 }
 
+async function resolveAmbRefCode(pool, value) {
+  if (!value) return null;
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+
+  try {
+    const result = await pool
+      .request()
+      .input('code', sql.NVarChar, normalized)
+      .query(`
+        SELECT TOP 1 ref_code 
+        FROM ambassadors 
+        WHERE ref_code = @code 
+           OR id = TRY_CAST(@code AS uniqueidentifier)
+           OR name = @code
+      `);
+
+    return result.recordset?.length ? result.recordset[0].ref_code : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getPlayers(req, res) {
   const pool = await getPool();
   const result = await pool
@@ -59,6 +82,7 @@ export async function createPlayer(req, res) {
   const pool = await getPool();
   const resolvedGameId = await resolveForeignKey(pool, game_id, 'games');
   const resolvedBranchId = await resolveForeignKey(pool, branch_id, 'branches');
+  const resolvedAmbRefCode = await resolveAmbRefCode(pool, amb_ref_code);
 
   const result = await pool
     .request()
@@ -75,7 +99,7 @@ export async function createPlayer(req, res) {
     .input('member_id', sql.NVarChar, member_id || null)
     .input('member_expiry', sql.Date, member_expiry || null)
     .input('member_value', sql.Decimal(10, 2), member_value || null)
-    .input('amb_ref_code', sql.NVarChar, amb_ref_code || null)
+    .input('amb_ref_code', sql.NVarChar, resolvedAmbRefCode || null)
     .input('joined', sql.Bit, joined === true)
     .input('join_date', sql.Date, join_date || null)
     .query(`
@@ -97,10 +121,24 @@ export async function createPlayer(req, res) {
 
 export async function updatePlayer(req, res) {
   const { id } = req.params;
-  const updates = req.body;
+  const updates = { ...req.body };
   if (!id) return res.status(400).json({ message: 'Player ID is required' });
 
   const pool = await getPool();
+
+  if ('game_id' in updates) {
+    updates.game_id = await resolveForeignKey(pool, updates.game_id, 'games');
+  }
+  if ('branch_id' in updates) {
+    updates.branch_id = await resolveForeignKey(pool, updates.branch_id, 'branches');
+  }
+  if ('amb_ref_code' in updates) {
+    updates.amb_ref_code = await resolveAmbRefCode(pool, updates.amb_ref_code);
+  }
+  if ('ambId' in updates && !('amb_ref_code' in updates)) {
+    updates.amb_ref_code = await resolveAmbRefCode(pool, updates.ambId);
+  }
+
   const updateFields = [];
   const request = pool.request().input('id', sql.UniqueIdentifier, id);
 

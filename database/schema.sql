@@ -107,7 +107,7 @@ CREATE TABLE attendance (
   player_id       UNIQUEIDENTIFIER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
   subscription_id UNIQUEIDENTIFIER REFERENCES subscriptions(id),
   date            DATE NOT NULL DEFAULT CAST(GETDATE() AS DATE),
-  status          NVARCHAR(20) DEFAULT 'present' CHECK (status IN ('present','absent')),
+  status          NVARCHAR(20) DEFAULT 'present' CHECK (status IN ('present','absent','late')),
   created_at      DATETIME2 DEFAULT GETDATE()
 );
 END

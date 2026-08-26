@@ -11,7 +11,13 @@ router.post(
   '/',
   protect,
   authorizeRoles('admin', 'manager', 'coach', 'accountant'),
-  [body('player_id').isUUID(), body('status').isString().notEmpty(), body('date').optional().isISO8601(), body('subscription_id').optional().isUUID()],
+  [
+    body('player_id').isString().notEmpty(),
+    body('status').isString().notEmpty(),
+    body('date').optional().isString(),
+    body('subscription_id').optional().isString(),
+    body('player_name').optional().isString(),
+  ],
   validate,
   createAttendance,
 );

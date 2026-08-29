@@ -213,7 +213,10 @@ export async function deleteSubscription(req, res) {
   await pool
     .request()
     .input('id', sql.UniqueIdentifier, id)
-    .query('DELETE FROM subscriptions WHERE id = @id');
+    .query(`
+      UPDATE attendance SET subscription_id = NULL WHERE subscription_id = @id;
+      DELETE FROM subscriptions WHERE id = @id;
+    `);
 
   return res.status(204).send();
 }

@@ -76,7 +76,15 @@ export async function deleteBranch(req, res) {
   await pool
     .request()
     .input('id', sql.UniqueIdentifier, id)
-    .query(`DELETE FROM branches WHERE id = @id`);
+    .query(`
+      UPDATE users SET branch_id = NULL WHERE branch_id = @id;
+      UPDATE players SET branch_id = NULL WHERE branch_id = @id;
+      UPDATE subscriptions SET branch_id = NULL WHERE branch_id = @id;
+      UPDATE staff SET branch_id = NULL WHERE branch_id = @id;
+      UPDATE finance SET branch_id = NULL WHERE branch_id = @id;
+      UPDATE leads SET branch_id = NULL WHERE branch_id = @id;
+      DELETE FROM branches WHERE id = @id;
+    `);
 
   return res.status(204).send();
 }

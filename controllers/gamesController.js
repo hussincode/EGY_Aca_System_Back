@@ -70,7 +70,11 @@ export async function deleteGame(req, res) {
   await pool
     .request()
     .input('id', sql.UniqueIdentifier, id)
-    .query('DELETE FROM games WHERE id = @id');
+    .query(`
+      UPDATE players SET game_id = NULL WHERE game_id = @id;
+      UPDATE subscriptions SET game_id = NULL WHERE game_id = @id;
+      DELETE FROM games WHERE id = @id;
+    `);
 
   return res.status(204).send();
 }

@@ -67,15 +67,16 @@ const router = express.Router();
 
 router.get('/', (req, res) => {
   const settings = readData();
-  res.json({ data: settings });
+  res.json({ data: settings, success: true });
 });
 
 router.post('/', (req, res) => {
   const current = readData();
   const updated = { ...current, ...req.body };
   writeData(updated);
-  res.json({ data: updated, message: 'Landing settings updated' });
+  res.json({ data: updated, success: true, message: 'Landing settings updated' });
 });
 
 export default router;
+
 

@@ -7,6 +7,7 @@ import { config as loadEnv } from 'dotenv';
 import { routes as apiRoutes } from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import landingSettingsRouter from './routes/landingSettings.js';
+import parentPortalRouter from './routes/parentPortal.js';
 
 loadEnv();
 
@@ -32,6 +33,8 @@ app.use(morgan('dev'));
 
 // Landing settings route is mounted BEFORE the rate limiter so polling never gets throttled
 app.use('/api/landing-settings', landingSettingsRouter);
+// Parent portal – public, no auth needed
+app.use('/api/parent-portal', parentPortalRouter);
 
 app.use(
   rateLimit({

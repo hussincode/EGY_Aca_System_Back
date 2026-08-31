@@ -7,16 +7,15 @@ import { getLeads, createLead, updateLead, deleteLead } from '../controllers/lea
 const router = express.Router();
 
 router.get('/', protect, authorizeRoles('admin', 'manager', 'coach', 'accountant'), getLeads);
+// Public endpoint for trial bookings from landing page
 router.post(
   '/',
-  protect,
-  authorizeRoles('admin', 'manager', 'coach', 'accountant'),
   [
     body('name').isString().notEmpty(),
     body('phone').isString().notEmpty(),
     body('interest').optional().isString(),
     body('status').optional().isString(),
-    body('branch_id').optional().isUUID(),
+    body('branch_id').optional({ nullable: true, checkFalsy: true }),
     body('notes').optional().isString(),
   ],
   validate,

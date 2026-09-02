@@ -84,8 +84,8 @@ function buildDatabaseConfig(database) {
       const config = {
         ...parsedConnection,
         database: parsedConnection.database || database,
-        connectionTimeout: 5000,
-        requestTimeout: 5000,
+        connectionTimeout: 30000,
+        requestTimeout: 30000,
       };
       if (process.env.DB_DRIVER) {
         config.driver = process.env.DB_DRIVER;
@@ -95,8 +95,8 @@ function buildDatabaseConfig(database) {
 
     const config = {
       connectionString: connectionString,
-      connectionTimeout: 5000,
-      requestTimeout: 5000,
+      connectionTimeout: 30000,
+      requestTimeout: 30000,
     };
     if (process.env.DB_DRIVER) {
       config.driver = process.env.DB_DRIVER;
@@ -108,8 +108,8 @@ function buildDatabaseConfig(database) {
   const config = {
     server: rawServer,
     database,
-    connectionTimeout: 5000,
-    requestTimeout: 5000,
+    connectionTimeout: 30000,
+    requestTimeout: 30000,
     options: {
       trustServerCertificate: true,
       enableArithAbort: true,
@@ -166,7 +166,7 @@ export function getDatabaseConfig() {
 
 export async function getPool() {
   if (!pool) {
-    pool = await withTimeout(sql.connect(config), 8000, 'Database connection timed out after 8 seconds');
+    pool = await withTimeout(sql.connect(config), 35000, 'Database connection timed out after 35 seconds');
     console.log('✅ Connected to SQL Server');
     try {
       await pool.request().query(`

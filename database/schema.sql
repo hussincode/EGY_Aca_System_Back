@@ -155,11 +155,16 @@ BEGIN
 CREATE TABLE leads (
   id          UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
   name        NVARCHAR(255) NOT NULL,
+  parent      NVARCHAR(255),
   phone       NVARCHAR(50),
   interest    NVARCHAR(500),
   status      NVARCHAR(50) DEFAULT 'new',
   branch_id   UNIQUEIDENTIFIER REFERENCES branches(id),
   notes       NVARCHAR(MAX),
+  score       NVARCHAR(50) DEFAULT 'hot',
+  age         NVARCHAR(50),
+  source      NVARCHAR(100),
+  followDate  NVARCHAR(100),
   created_at  DATETIME2 DEFAULT GETDATE()
 );
 END

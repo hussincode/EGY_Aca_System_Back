@@ -183,6 +183,20 @@ export async function getPool() {
               ALTER TABLE attendance ADD CONSTRAINT CK_attendance_status CHECK (status IN ('present', 'absent', 'late'));
           END
         END
+
+        IF OBJECT_ID('leads','U') IS NOT NULL
+        BEGIN
+          IF COL_LENGTH('leads', 'parent') IS NULL
+            ALTER TABLE leads ADD parent NVARCHAR(255);
+          IF COL_LENGTH('leads', 'score') IS NULL
+            ALTER TABLE leads ADD score NVARCHAR(50);
+          IF COL_LENGTH('leads', 'source') IS NULL
+            ALTER TABLE leads ADD source NVARCHAR(100);
+          IF COL_LENGTH('leads', 'age') IS NULL
+            ALTER TABLE leads ADD age NVARCHAR(50);
+          IF COL_LENGTH('leads', 'followDate') IS NULL
+            ALTER TABLE leads ADD followDate NVARCHAR(100);
+        END
       `);
     } catch {
       // ignore constraint auto-patch errors

@@ -11,6 +11,8 @@ import attendanceRoutes from './attendance.js';
 import ambassadorsRoutes from './ambassadors.js';
 import usersRoutes from './users.js';
 import landingSettingsRoutes from './landingSettings.js';
+import auditRoutes from './audit.js';
+import systemRoutes from './system.js';
 
 const apiRouter = express.Router();
 
@@ -26,7 +28,10 @@ apiRouter.use('/attendance', attendanceRoutes);
 apiRouter.use('/ambassadors', ambassadorsRoutes);
 apiRouter.use('/users', usersRoutes);
 apiRouter.use('/landing-settings', landingSettingsRoutes);
+apiRouter.use('/audit', auditRoutes);
+apiRouter.use('/system', systemRoutes);
 
 export { apiRouter as routes };
+
 
 

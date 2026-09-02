@@ -7,64 +7,7 @@
     "imageUrl": ""
   },
   "landing_hero_image": "",
-  "landing_branches": [
-    {
-      "id": "7FB1B3F8-56B3-4190-A86B-E9721511BD45",
-      "name": "sss",
-      "description": "الموقع: dadsdasda | المدير: sss",
-      "address": "dadsdasda",
-      "hours": "6:00 AM - 10:00 PM Daily",
-      "mapsUrl": "",
-      "image": "/assets/football_card.jpg",
-      "features": [
-        "ملاعب معتمدة",
-        "استراحة أولياء الأمور",
-        "مرافق رياضية شمولية"
-      ]
-    },
-    {
-      "id": "24EFADAD-6F61-4F3A-A1BD-47DDCA9ADEB6",
-      "name": "الجيزه",
-      "description": "الموقع: https://www.google.com/maps | المدير: احمد محمود",
-      "address": "https://www.google.com/maps",
-      "hours": "6:00 AM - 10:00 PM Daily",
-      "mapsUrl": "https://www.google.com/maps",
-      "image": "/assets/football_card.jpg",
-      "features": [
-        "ملاعب معتمدة",
-        "استراحة أولياء الأمور",
-        "مرافق رياضية شمولية"
-      ]
-    },
-    {
-      "id": "54D65068-B3D6-4A7A-87E4-FFC3C88BA17D",
-      "name": "فرع امبابه",
-      "description": "المدير: كابتن ماجده",
-      "address": "العنوان الرئيسي للأكاديمية",
-      "hours": "6:00 AM - 10:00 PM Daily",
-      "mapsUrl": "",
-      "image": "/assets/football_card.jpg",
-      "features": [
-        "ملاعب معتمدة",
-        "استراحة أولياء الأمور",
-        "مرافق رياضية شمولية"
-      ]
-    },
-    {
-      "id": "B0C6D615-8AF6-44F0-B9E9-C351EA395A73",
-      "name": "فرع نادي الداخليه",
-      "description": "المدير: كابتن احمد صبحي",
-      "address": "العنوان الرئيسي للأكاديمية",
-      "hours": "6:00 AM - 10:00 PM Daily",
-      "mapsUrl": "",
-      "image": "/assets/football_card.jpg",
-      "features": [
-        "ملاعب معتمدة",
-        "استراحة أولياء الأمور",
-        "مرافق رياضية شمولية"
-      ]
-    }
-  ],
+  "landing_branches": [],
   "system_settings_general": {
     "academyName": "ايجي سبورتنج كلوب",
     "currency": "EGP",
@@ -98,36 +41,7 @@
       "isFeatured": false
     }
   ],
-  "landing_sports": [
-    {
-      "id": "D5A3CF1B-1C25-4C37-A0FC-6A98E119DDCE",
-      "name": "test001",
-      "tag": "test001",
-      "desc": "test001",
-      "image": "/assets/football_card.jpg"
-    },
-    {
-      "id": "B49B3D81-2AA0-4B2D-8C6F-B0355E2FB3A1",
-      "name": "السباحه",
-      "tag": "السباحه",
-      "desc": "برنامج تدريبي متكامل لتطوير المهارات الرياضية واللياقة البدنية.",
-      "image": "/assets/football_card.jpg"
-    },
-    {
-      "id": "23B4089B-A8BA-46D5-8F66-400FEEFB6E86",
-      "name": "كره السله",
-      "tag": "كره السله",
-      "desc": "برنامج تدريبي متكامل لتطوير المهارات الرياضية واللياقة البدنية.",
-      "image": "/assets/football_card.jpg"
-    },
-    {
-      "id": "CE83C596-5B45-4A25-A675-864E2580479A",
-      "name": "كره القدم",
-      "tag": "كره القدم",
-      "desc": "نشاط كره القدم",
-      "image": "/assets/football_card.jpg"
-    }
-  ],
+  "landing_sports": [],
   "landing_sports_title": "رياضات",
   "users": [
     {
@@ -144,9 +58,9 @@
       "name": "حسين",
       "email": "HussinHesham@gmail.com",
       "role": "manager",
-      "branchId": "B0C6D615-8AF6-44F0-B9E9-C351EA395A73",
+      "branchId": null,
       "created_at": "2026-08-26T07:32:56.660Z",
-      "branchName": "فرع نادي الداخليه"
+      "branchName": null
     },
     {
       "id": "F7B13F43-ADFA-4C07-925F-39001089E71E",

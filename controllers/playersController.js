@@ -41,6 +41,48 @@ async function resolveAmbRefCode(pool, value) {
   }
 }
 
+async function resolveUniquePlayerSerial(pool, requestedSerial) {
+  const serialTrimmed = requestedSerial ? String(requestedSerial).trim() : '';
+
+  if (serialTrimmed) {
+    const check = await pool
+      .request()
+      .input('serial', sql.NVarChar, serialTrimmed)
+      .query('SELECT TOP 1 id FROM players WHERE player_serial = @serial');
+    if (!check.recordset?.length) {
+      return serialTrimmed;
+    }
+  }
+
+  const allSerialsResult = await pool
+    .request()
+    .query("SELECT player_serial FROM players WHERE player_serial LIKE 'PLY-%'");
+
+  const used = new Set();
+  let max = 0;
+  (allSerialsResult.recordset || []).forEach((row) => {
+    const match = row.player_serial?.match(/^PLY-(\d+)$/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!Number.isNaN(num)) {
+        used.add(num);
+        if (num > max) max = num;
+      }
+    }
+  });
+
+  let nextSeq = 1;
+  for (let i = 1; i <= max + 1; i++) {
+    if (!used.has(i)) {
+      nextSeq = i;
+      break;
+    }
+  }
+
+  const padLength = serialTrimmed?.match(/^PLY-(\d+)$/i)?.[1]?.length || 2;
+  return `PLY-${String(nextSeq).padStart(padLength, '0')}`;
+}
+
 export async function getPlayers(req, res) {
   const pool = await getPool();
   const result = await pool
@@ -83,10 +125,11 @@ export async function createPlayer(req, res) {
   const resolvedGameId = await resolveForeignKey(pool, game_id, 'games');
   const resolvedBranchId = await resolveForeignKey(pool, branch_id, 'branches');
   const resolvedAmbRefCode = await resolveAmbRefCode(pool, amb_ref_code);
+  const resolvedPlayerSerial = await resolveUniquePlayerSerial(pool, playerSerial);
 
   const result = await pool
     .request()
-    .input('playerSerial', sql.NVarChar, playerSerial || null)
+    .input('playerSerial', sql.NVarChar, resolvedPlayerSerial)
     .input('name', sql.NVarChar, name)
     .input('age', sql.Int, age || null)
     .input('phone', sql.NVarChar, phone || null)
@@ -137,6 +180,17 @@ export async function updatePlayer(req, res) {
   }
   if ('ambId' in updates && !('amb_ref_code' in updates)) {
     updates.amb_ref_code = await resolveAmbRefCode(pool, updates.ambId);
+  }
+  if ('playerSerial' in updates && updates.playerSerial) {
+    const serialTrimmed = String(updates.playerSerial).trim();
+    const check = await pool
+      .request()
+      .input('serial', sql.NVarChar, serialTrimmed)
+      .input('id', sql.UniqueIdentifier, id)
+      .query('SELECT TOP 1 id FROM players WHERE player_serial = @serial AND id <> @id');
+    if (check.recordset?.length) {
+      delete updates.playerSerial;
+    }
   }
 
   const updateFields = [];

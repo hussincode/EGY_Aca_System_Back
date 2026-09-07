@@ -165,7 +165,15 @@ export function getDatabaseConfig() {
 }
 
 export async function getPool() {
-  if (!pool) {
+  if (!pool || !pool.connected) {
+    if (pool) {
+      try {
+        await pool.close();
+      } catch {
+        // ignore
+      }
+      pool = null;
+    }
     pool = await withTimeout(sql.connect(config), 35000, 'Database connection timed out after 35 seconds');
     console.log('✅ Connected to SQL Server');
     try {

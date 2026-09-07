@@ -7,7 +7,78 @@
     "imageUrl": ""
   },
   "landing_hero_image": "",
-  "landing_branches": [],
+  "landing_branches": [
+    {
+      "id": "B35ED6F0-54FE-4CE5-83F9-781C2F30DFBB",
+      "name": "فرع حمام سباحه السراج",
+      "description": "المدير: كابتن ماجده",
+      "address": "العنوان الرئيسي للأكاديمية",
+      "hours": "6:00 AM - 10:00 PM Daily",
+      "mapsUrl": "",
+      "image": "/assets/football_card.jpg",
+      "features": [
+        "ملاعب معتمدة",
+        "استراحة أولياء الأمور",
+        "مرافق رياضية شمولية"
+      ]
+    },
+    {
+      "id": "0142B77D-D1F0-49A7-82C9-C354D620F9EE",
+      "name": "فرع مركز شباب امبابه",
+      "description": "المدير: الكابتن يامن علاء",
+      "address": "العنوان الرئيسي للأكاديمية",
+      "hours": "6:00 AM - 10:00 PM Daily",
+      "mapsUrl": "",
+      "image": "/assets/football_card.jpg",
+      "features": [
+        "ملاعب معتمدة",
+        "استراحة أولياء الأمور",
+        "مرافق رياضية شمولية"
+      ]
+    },
+    {
+      "id": "CABC2FF7-3B6E-414B-A20B-C9366F31659C",
+      "name": "فرع مركز شباب زهراء اكتوبر",
+      "description": "المدير: الكابتن حسام الشوبكي",
+      "address": "العنوان الرئيسي للأكاديمية",
+      "hours": "6:00 AM - 10:00 PM Daily",
+      "mapsUrl": "",
+      "image": "/assets/football_card.jpg",
+      "features": [
+        "ملاعب معتمدة",
+        "استراحة أولياء الأمور",
+        "مرافق رياضية شمولية"
+      ]
+    },
+    {
+      "id": "DE265D1C-1131-4F8C-BDF4-42ADF406E75F",
+      "name": "فرع نادي الداخليه الرياضي",
+      "description": "المدير: الكابتن حسام الشوبكي",
+      "address": "العنوان الرئيسي للأكاديمية",
+      "hours": "6:00 AM - 10:00 PM Daily",
+      "mapsUrl": "",
+      "image": "/assets/football_card.jpg",
+      "features": [
+        "ملاعب معتمدة",
+        "استراحة أولياء الأمور",
+        "مرافق رياضية شمولية"
+      ]
+    },
+    {
+      "id": "6F9B81F0-EE14-4408-9EA4-A7232D92F027",
+      "name": "نادي  اجوان الوراق",
+      "description": "المدير: الكابتن ماجده",
+      "address": "العنوان الرئيسي للأكاديمية",
+      "hours": "6:00 AM - 10:00 PM Daily",
+      "mapsUrl": "",
+      "image": "/assets/football_card.jpg",
+      "features": [
+        "ملاعب معتمدة",
+        "استراحة أولياء الأمور",
+        "مرافق رياضية شمولية"
+      ]
+    }
+  ],
   "system_settings_general": {
     "academyName": "ايجي سبورتنج كلوب",
     "currency": "EGP",
@@ -41,7 +112,29 @@
       "isFeatured": false
     }
   ],
-  "landing_sports": [],
+  "landing_sports": [
+    {
+      "id": "91A6776E-B79C-47C2-A264-3963C57ED6A8",
+      "name": "السباحه",
+      "tag": "السباحه",
+      "desc": "نشاط السباحه",
+      "image": "/assets/football_card.jpg"
+    },
+    {
+      "id": "EEE2C6E8-19EC-4CE1-BDA9-1981407C7DAE",
+      "name": "كره السله",
+      "tag": "كره السله",
+      "desc": "نشاط كره السله",
+      "image": "/assets/football_card.jpg"
+    },
+    {
+      "id": "C6F9C3E4-E392-45C0-B48D-E6B8862FA77D",
+      "name": "كره القدم",
+      "tag": "كره القدم",
+      "desc": "نشاط كره القدم",
+      "image": "/assets/football_card.jpg"
+    }
+  ],
   "landing_sports_title": "رياضات",
   "users": [
     {

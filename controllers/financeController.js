@@ -5,18 +5,39 @@ function isValidGuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value).trim());
 }
 
-async function resolveBranchId(pool, val) {
-  if (!val) return null;
-  const str = String(val).trim();
-  if (isValidGuid(str)) return str;
+async function resolveBranchId(pool, val, relatedTo = null, sourceId = null) {
+  if (val) {
+    const str = String(val).trim();
+    if (isValidGuid(str)) return str;
 
-  try {
-    const res = await pool
-      .request()
-      .input('name', sql.NVarChar, str)
-      .query('SELECT TOP 1 id FROM branches WHERE name = @name');
-    if (res.recordset?.length) return res.recordset[0].id;
-  } catch {}
+    try {
+      const res = await pool
+        .request()
+        .input('name', sql.NVarChar, str)
+        .query('SELECT TOP 1 id FROM branches WHERE name = @name');
+      if (res.recordset?.length) return res.recordset[0].id;
+    } catch {}
+  }
+
+  if (sourceId && isValidGuid(sourceId)) {
+    try {
+      const res = await pool
+        .request()
+        .input('subId', sql.UniqueIdentifier, sourceId)
+        .query('SELECT TOP 1 branch_id FROM subscriptions WHERE id = @subId AND branch_id IS NOT NULL');
+      if (res.recordset?.length && res.recordset[0].branch_id) return res.recordset[0].branch_id;
+    } catch {}
+  }
+
+  if (relatedTo) {
+    try {
+      const res = await pool
+        .request()
+        .input('pName', sql.NVarChar, String(relatedTo).trim())
+        .query('SELECT TOP 1 branch_id FROM players WHERE name = @pName AND branch_id IS NOT NULL');
+      if (res.recordset?.length && res.recordset[0].branch_id) return res.recordset[0].branch_id;
+    } catch {}
+  }
 
   return null;
 }
@@ -46,12 +67,36 @@ export { normalizeFinancePayload };
 export async function getFinanceRecords(req, res) {
   try {
     const pool = await getPool();
+
+    // Auto-backfill NULL branch_id in database from subscriptions or players
+    try {
+      await pool.request().query(`
+        UPDATE f
+        SET f.branch_id = COALESCE(sub.branch_id, p_sub.branch_id, ply.branch_id)
+        FROM finance f
+        LEFT JOIN subscriptions sub ON f.source_id = sub.id
+        LEFT JOIN players p_sub ON sub.player_id = p_sub.id
+        LEFT JOIN players ply ON f.related_to = ply.name
+        WHERE f.branch_id IS NULL AND COALESCE(sub.branch_id, p_sub.branch_id, ply.branch_id) IS NOT NULL;
+      `);
+    } catch (backfillErr) {
+      console.warn('Finance branch backfill note:', backfillErr.message);
+    }
+
     const result = await pool
       .request()
       .query(`
-        SELECT f.*, b.name AS branch_name, b.name AS branch
+        SELECT f.*, 
+               COALESCE(b.name, sb_branch.name, pb_sub.name, pb_ply.name) AS branch_name, 
+               COALESCE(b.name, sb_branch.name, pb_sub.name, pb_ply.name) AS branch
         FROM finance f
         LEFT JOIN branches b ON f.branch_id = b.id
+        LEFT JOIN subscriptions sub ON f.source_id = sub.id
+        LEFT JOIN branches sb_branch ON sub.branch_id = sb_branch.id
+        LEFT JOIN players p_sub ON sub.player_id = p_sub.id
+        LEFT JOIN branches pb_sub ON p_sub.branch_id = pb_sub.id
+        LEFT JOIN players ply ON f.related_to = ply.name
+        LEFT JOIN branches pb_ply ON ply.branch_id = pb_ply.id
         ORDER BY f.date DESC, f.created_at DESC
       `);
     return res.json({ data: result.recordset || [] });
@@ -69,7 +114,7 @@ export async function createFinanceRecord(req, res) {
   }
 
   const pool = await getPool();
-  const resolvedBranchId = await resolveBranchId(pool, branch_id);
+  const resolvedBranchId = await resolveBranchId(pool, branch_id, related_to, source_id);
 
   const result = await pool
     .request()
@@ -116,7 +161,7 @@ export async function updateFinanceRecord(req, res) {
   }
 
   const pool = await getPool();
-  const resolvedBranchId = await resolveBranchId(pool, branch_id);
+  const resolvedBranchId = await resolveBranchId(pool, branch_id, related_to, source_id);
 
   const result = await pool
     .request()

@@ -71,11 +71,18 @@ export async function getSubscriptions(req, res) {
   const result = await pool
     .request()
     .query(`
-      SELECT s.*, p.name AS player_name, g.name AS game_name, b.name AS branch_name
+      SELECT s.*, 
+             p.name AS player_name, 
+             p.player_serial,
+             p.phone AS player_phone,
+             g.name AS game_name, 
+             COALESCE(pb.name, b.name) AS branch_name,
+             COALESCE(p.branch_id, s.branch_id) AS branch_id
       FROM subscriptions s
       LEFT JOIN players p ON s.player_id = p.id
       LEFT JOIN games g ON s.game_id = g.id
       LEFT JOIN branches b ON s.branch_id = b.id
+      LEFT JOIN branches pb ON p.branch_id = pb.id
       ORDER BY s.start_date DESC
     `);
   const formatted = (result.recordset || []).map(formatSubscriptionRecord);
@@ -189,11 +196,18 @@ export async function updateSubscription(req, res) {
     .request()
     .input('id', sql.UniqueIdentifier, id)
     .query(`
-      SELECT s.*, p.name AS player_name, g.name AS game_name, b.name AS branch_name
+      SELECT s.*, 
+             p.name AS player_name, 
+             p.player_serial,
+             p.phone AS player_phone,
+             g.name AS game_name, 
+             COALESCE(pb.name, b.name) AS branch_name,
+             COALESCE(p.branch_id, s.branch_id) AS branch_id
       FROM subscriptions s
       LEFT JOIN players p ON s.player_id = p.id
       LEFT JOIN games g ON s.game_id = g.id
       LEFT JOIN branches b ON s.branch_id = b.id
+      LEFT JOIN branches pb ON p.branch_id = pb.id
       WHERE s.id = @id
     `);
 

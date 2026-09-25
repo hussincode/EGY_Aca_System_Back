@@ -161,6 +161,15 @@
       "branchName": null
     },
     {
+      "id": "2FEC5A86-1A06-4582-953A-151D7592300A",
+      "name": "بسمله",
+      "email": "basmalamohamed937@gmail.com",
+      "role": "manager",
+      "branchId": null,
+      "created_at": "2026-09-06T15:38:16.880Z",
+      "branchName": null
+    },
+    {
       "id": "D010AB49-2297-4E50-9CE4-4CF94221FD44",
       "name": "حسين",
       "email": "HussinHesham@gmail.com",

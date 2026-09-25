@@ -9,7 +9,7 @@ export async function getStaff(req, res) {
 }
 
 export async function createStaff(req, res) {
-  const { staff_serial, name, phone, role, pay_type, rate, hours, revenue, branch_id } = req.body;
+  const { staff_serial, name, phone, role, pay_type, rate, hours, revenue, advance, branch_id } = req.body;
   if (!name || !role) {
     return res.status(400).json({ message: 'Name and role are required' });
   }
@@ -25,11 +25,12 @@ export async function createStaff(req, res) {
     .input('rate', sql.Decimal(10, 2), rate || 0)
     .input('hours', sql.Decimal(10, 2), hours || 0)
     .input('revenue', sql.Decimal(10, 2), revenue || 0)
+    .input('advance', sql.Decimal(10, 2), advance || 0)
     .input('branch_id', sql.UniqueIdentifier, branch_id || null)
     .query(`
-      INSERT INTO staff (id, staff_serial, name, phone, role, pay_type, rate, hours, revenue, branch_id)
+      INSERT INTO staff (id, staff_serial, name, phone, role, pay_type, rate, hours, revenue, advance, branch_id)
       OUTPUT INSERTED.*
-      VALUES (NEWID(), @staff_serial, @name, @phone, @role, @pay_type, @rate, @hours, @revenue, @branch_id)
+      VALUES (NEWID(), @staff_serial, @name, @phone, @role, @pay_type, @rate, @hours, @revenue, @advance, @branch_id)
     `);
 
   return res.status(201).json({ data: result.recordset?.[0] || null, message: 'Staff created' });
@@ -40,7 +41,7 @@ export async function updateStaff(req, res) {
   if (!id) return res.status(400).json({ message: 'Staff ID is required' });
 
   const updates = [];
-  const { staff_serial, name, phone, role, pay_type, rate, hours, revenue, branch_id } = req.body;
+  const { staff_serial, name, phone, role, pay_type, rate, hours, revenue, advance, branch_id } = req.body;
   const pool = await getPool();
   const request = pool.request().input('id', sql.UniqueIdentifier, id);
 
@@ -75,6 +76,10 @@ export async function updateStaff(req, res) {
   if (revenue !== undefined) {
     updates.push('revenue = @revenue');
     request.input('revenue', sql.Decimal(10, 2), revenue);
+  }
+  if (advance !== undefined) {
+    updates.push('advance = @advance');
+    request.input('advance', sql.Decimal(10, 2), advance);
   }
   if (branch_id) {
     updates.push('branch_id = @branch_id');

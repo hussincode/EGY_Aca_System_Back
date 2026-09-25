@@ -5,20 +5,55 @@ function isValidGuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value).trim());
 }
 
-async function resolveBranchId(pool, val, relatedTo = null, sourceId = null) {
-  if (val) {
-    const str = String(val).trim();
+function normalizeArabic(str = '') {
+  if (!str) return '';
+  return String(str)
+    .trim()
+    .toLowerCase()
+    .replace(/^فرع\s+/, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/\s+/g, ' ');
+}
+
+async function resolveBranchId(pool, val, relatedTo = null, sourceId = null, description = null) {
+  let allBranches = [];
+  try {
+    const res = await pool.request().query('SELECT id, name FROM branches');
+    allBranches = res.recordset || [];
+  } catch {}
+
+  const matchFromText = (text) => {
+    if (!text || !allBranches.length) return null;
+    const str = String(text).trim();
     if (isValidGuid(str)) return str;
 
-    try {
-      const res = await pool
-        .request()
-        .input('name', sql.NVarChar, str)
-        .query('SELECT TOP 1 id FROM branches WHERE name = @name');
-      if (res.recordset?.length) return res.recordset[0].id;
-    } catch {}
+    // 1. Exact match
+    const exact = allBranches.find((b) => b.name && b.name.trim().toLowerCase() === str.toLowerCase());
+    if (exact) return exact.id;
+
+    // 2. Normalized match
+    const norm = normalizeArabic(str);
+    if (!norm) return null;
+
+    const normMatch = allBranches.find((b) => {
+      if (!b.name) return false;
+      const bNorm = normalizeArabic(b.name);
+      return bNorm === norm || bNorm.includes(norm) || norm.includes(bNorm);
+    });
+    if (normMatch) return normMatch.id;
+
+    return null;
+  };
+
+  // 1. Direct branch value
+  if (val) {
+    const found = matchFromText(val);
+    if (found) return found;
   }
 
+  // 2. From sourceId (subscriptions)
   if (sourceId && isValidGuid(sourceId)) {
     try {
       const res = await pool
@@ -29,7 +64,11 @@ async function resolveBranchId(pool, val, relatedTo = null, sourceId = null) {
     } catch {}
   }
 
+  // 3. From relatedTo (direct branch name or player)
   if (relatedTo) {
+    const foundBranch = matchFromText(relatedTo);
+    if (foundBranch) return foundBranch;
+
     try {
       const res = await pool
         .request()
@@ -37,6 +76,19 @@ async function resolveBranchId(pool, val, relatedTo = null, sourceId = null) {
         .query('SELECT TOP 1 branch_id FROM players WHERE name = @pName AND branch_id IS NOT NULL');
       if (res.recordset?.length && res.recordset[0].branch_id) return res.recordset[0].branch_id;
     } catch {}
+  }
+
+  // 4. From description (e.g., 'فرع: الدقي' or 'شراء ... - فرع: ...')
+  if (description) {
+    for (const b of allBranches) {
+      if (b.name && description.includes(b.name)) {
+        return b.id;
+      }
+      const bNorm = normalizeArabic(b.name);
+      if (bNorm && normalizeArabic(description).includes(bNorm)) {
+        return b.id;
+      }
+    }
   }
 
   return null;
@@ -51,7 +103,7 @@ function normalizeFinancePayload(body = {}) {
   return {
     type: toNullableString(body.type ?? body.Type),
     category: toNullableString(body.category ?? body.Category),
-    branch_id: body.branch_id ?? body.branchId ?? body.branch ?? null,
+    branch_id: body.branch_id ?? body.branchId ?? body.branch ?? body.branch_name ?? body.branchName ?? null,
     related_to: toNullableString(body.related_to ?? body.relatedTo),
     amount: Number(body.amount ?? body.Amount ?? 0),
     date: body.date ?? body.Date ?? null,
@@ -114,7 +166,7 @@ export async function createFinanceRecord(req, res) {
   }
 
   const pool = await getPool();
-  const resolvedBranchId = await resolveBranchId(pool, branch_id, related_to, source_id);
+  const resolvedBranchId = await resolveBranchId(pool, branch_id, related_to, source_id, description);
 
   const result = await pool
     .request()
@@ -161,7 +213,7 @@ export async function updateFinanceRecord(req, res) {
   }
 
   const pool = await getPool();
-  const resolvedBranchId = await resolveBranchId(pool, branch_id, related_to, source_id);
+  const resolvedBranchId = await resolveBranchId(pool, branch_id, related_to, source_id, description);
 
   const result = await pool
     .request()

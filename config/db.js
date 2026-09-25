@@ -205,6 +205,12 @@ export async function getPool() {
           IF COL_LENGTH('leads', 'followDate') IS NULL
             ALTER TABLE leads ADD followDate NVARCHAR(100);
         END
+
+        IF OBJECT_ID('staff','U') IS NOT NULL
+        BEGIN
+          IF COL_LENGTH('staff', 'advance') IS NULL
+            ALTER TABLE staff ADD advance DECIMAL(10, 2) DEFAULT 0;
+        END
       `);
     } catch {
       // ignore constraint auto-patch errors
